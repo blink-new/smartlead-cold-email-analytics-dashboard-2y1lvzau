@@ -877,7 +877,7 @@ function App() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-slate-900">
-                    {(isConnected ? emailAccounts : mockEmailAccounts).filter((account: any) => account.status === 'active').length}
+                    {(isConnected ? emailAccounts : mockEmailAccounts).filter((account: any) => (account.status || 'unknown') === 'active').length}
                   </div>
                   <div className="flex items-center text-xs text-green-600 mt-1">
                     <TrendingUp className="w-3 h-3 mr-1" />
@@ -893,7 +893,7 @@ function App() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-slate-900">
-                    {Math.round((isConnected ? emailAccounts : mockEmailAccounts).reduce((sum: number, account: any) => sum + account.health_score, 0) / (isConnected ? emailAccounts.length || 1 : mockEmailAccounts.length))}
+                    {Math.round((isConnected ? emailAccounts : mockEmailAccounts).reduce((sum: number, account: any) => sum + (account.health_score || 0), 0) / (isConnected ? emailAccounts.length || 1 : mockEmailAccounts.length))}
                   </div>
                   <div className="flex items-center text-xs text-green-600 mt-1">
                     <TrendingUp className="w-3 h-3 mr-1" />
@@ -909,7 +909,7 @@ function App() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-slate-900">
-                    {(isConnected ? emailAccounts : mockEmailAccounts).filter((account: any) => account.status === 'warning' || account.health_score < 70).length}
+                    {(isConnected ? emailAccounts : mockEmailAccounts).filter((account: any) => (account.status || 'unknown') === 'warning' || (account.health_score || 0) < 70).length}
                   </div>
                   <div className="flex items-center text-xs text-red-600 mt-1">
                     <AlertTriangle className="w-3 h-3 mr-1" />
@@ -947,22 +947,22 @@ function App() {
                             <Mail className="w-5 h-5 text-blue-600" />
                           </div>
                           <div>
-                            <h3 className="font-semibold text-slate-900">{account.email}</h3>
-                            <p className="text-sm text-slate-500">{account.provider}</p>
+                            <h3 className="font-semibold text-slate-900">{account.email || 'Unknown Email'}</h3>
+                            <p className="text-sm text-slate-500">{account.provider || 'Unknown Provider'}</p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
                           <Badge 
                             className={
-                              account.status === 'active' ? 'bg-green-100 text-green-800 border-green-200' :
-                              account.status === 'paused' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                              (account.status || 'unknown') === 'active' ? 'bg-green-100 text-green-800 border-green-200' :
+                              (account.status || 'unknown') === 'paused' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
                               'bg-red-100 text-red-800 border-red-200'
                             }
                           >
-                            {account.status === 'active' && <Wifi className="w-3 h-3 mr-1" />}
-                            {account.status === 'paused' && <Pause className="w-3 h-3 mr-1" />}
-                            {account.status === 'warning' && <WifiOff className="w-3 h-3 mr-1" />}
-                            {account.status.charAt(0).toUpperCase() + account.status.slice(1)}
+                            {(account.status || 'unknown') === 'active' && <Wifi className="w-3 h-3 mr-1" />}
+                            {(account.status || 'unknown') === 'paused' && <Pause className="w-3 h-3 mr-1" />}
+                            {(account.status || 'unknown') === 'warning' && <WifiOff className="w-3 h-3 mr-1" />}
+                            {(account.status || 'unknown').charAt(0).toUpperCase() + (account.status || 'unknown').slice(1)}
                           </Badge>
                           <Button variant="ghost" size="sm">
                             <MoreHorizontal className="w-4 h-4" />
@@ -975,18 +975,18 @@ function App() {
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium text-slate-700">Health Score</span>
                           <span className={`text-sm font-semibold ${
-                            account.health_score >= 90 ? 'text-green-600' :
-                            account.health_score >= 70 ? 'text-yellow-600' :
+                            (account.health_score || 0) >= 90 ? 'text-green-600' :
+                            (account.health_score || 0) >= 70 ? 'text-yellow-600' :
                             'text-red-600'
                           }`}>
-                            {account.health_score}/100
+                            {account.health_score || 0}/100
                           </span>
                         </div>
                         <Progress 
-                          value={account.health_score} 
+                          value={account.health_score || 0} 
                           className={`h-2 ${
-                            account.health_score >= 90 ? '[&>div]:bg-green-500' :
-                            account.health_score >= 70 ? '[&>div]:bg-yellow-500' :
+                            (account.health_score || 0) >= 90 ? '[&>div]:bg-green-500' :
+                            (account.health_score || 0) >= 70 ? '[&>div]:bg-yellow-500' :
                             '[&>div]:bg-red-500'
                           }`}
                         />
@@ -995,20 +995,20 @@ function App() {
                       {/* Account Metrics Grid */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         <div className="text-center">
-                          <div className="text-lg font-semibold text-slate-900">{account.sent_today}</div>
+                          <div className="text-lg font-semibold text-slate-900">{account.sent_today || 0}</div>
                           <div className="text-xs text-slate-500">Sent Today</div>
-                          <div className="text-xs text-slate-400">/ {account.daily_limit} limit</div>
+                          <div className="text-xs text-slate-400">/ {account.daily_limit || 0} limit</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-lg font-semibold text-slate-900">{account.deliverability}%</div>
+                          <div className="text-lg font-semibold text-slate-900">{account.deliverability || 0}%</div>
                           <div className="text-xs text-slate-500">Deliverability</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-lg font-semibold text-slate-900">{account.bounce_rate}%</div>
+                          <div className="text-lg font-semibold text-slate-900">{account.bounce_rate || 0}%</div>
                           <div className="text-xs text-slate-500">Bounce Rate</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-lg font-semibold text-slate-900">{account.spam_rate}%</div>
+                          <div className="text-lg font-semibold text-slate-900">{account.spam_rate || 0}%</div>
                           <div className="text-xs text-slate-500">Spam Rate</div>
                         </div>
                       </div>
@@ -1021,13 +1021,13 @@ function App() {
                             <Badge 
                               variant="outline"
                               className={
-                                account.warmup_status === 'completed' ? 'border-green-200 text-green-700' :
-                                account.warmup_status === 'in_progress' ? 'border-blue-200 text-blue-700' :
-                                account.warmup_status === 'paused' ? 'border-yellow-200 text-yellow-700' :
+                                (account.warmup_status || 'unknown') === 'completed' ? 'border-green-200 text-green-700' :
+                                (account.warmup_status || 'unknown') === 'in_progress' ? 'border-blue-200 text-blue-700' :
+                                (account.warmup_status || 'unknown') === 'paused' ? 'border-yellow-200 text-yellow-700' :
                                 'border-red-200 text-red-700'
                               }
                             >
-                              {account.warmup_status.replace('_', ' ')}
+                              {(account.warmup_status || 'unknown').replace('_', ' ')}
                             </Badge>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -1035,18 +1035,18 @@ function App() {
                             <Badge 
                               variant="outline"
                               className={
-                                account.reputation === 'excellent' ? 'border-green-200 text-green-700' :
-                                account.reputation === 'good' ? 'border-blue-200 text-blue-700' :
-                                account.reputation === 'fair' ? 'border-yellow-200 text-yellow-700' :
+                                (account.reputation || 'unknown') === 'excellent' ? 'border-green-200 text-green-700' :
+                                (account.reputation || 'unknown') === 'good' ? 'border-blue-200 text-blue-700' :
+                                (account.reputation || 'unknown') === 'fair' ? 'border-yellow-200 text-yellow-700' :
                                 'border-red-200 text-red-700'
                               }
                             >
-                              {account.reputation.replace('_', ' ')}
+                              {(account.reputation || 'unknown').replace('_', ' ')}
                             </Badge>
                           </div>
                         </div>
                         <div className="text-slate-400">
-                          Last activity: {new Date(account.last_activity).toLocaleDateString()}
+                          Last activity: {account.last_activity ? new Date(account.last_activity).toLocaleDateString() : 'Unknown'}
                         </div>
                       </div>
                     </div>
