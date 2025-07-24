@@ -209,52 +209,83 @@ function App() {
     })
   }
 
-  // Function to fetch email accounts from Smartlead API
+  // Function to fetch email accounts from Smartlead API with pagination
   const fetchEmailAccounts = async (key: string) => {
     setLoadingAccounts(true)
     
     try {
-      const response = await fetch(`https://server.smartlead.ai/api/v1/email-accounts?api_key=${key}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch email accounts')
-      }
-
-      const data = await response.json()
-      console.log('Email accounts API response:', data) // Debug log
+      let allAccounts: any[] = []
+      let page = 1
+      let hasMorePages = true
       
-      // Handle different possible response structures
-      let accounts = []
-      if (Array.isArray(data)) {
-        accounts = data
-      } else if (data.email_accounts && Array.isArray(data.email_accounts)) {
-        accounts = data.email_accounts
-      } else if (data.data && Array.isArray(data.data)) {
-        accounts = data.data
-      } else if (data.accounts && Array.isArray(data.accounts)) {
-        accounts = data.accounts
+      // Fetch all pages of email accounts
+      while (hasMorePages) {
+        console.log(`Fetching email accounts page ${page}...`)
+        
+        const response = await fetch(`https://server.smartlead.ai/api/v1/email-accounts?api_key=${key}&page=${page}&limit=100`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch email accounts page ${page}`)
+        }
+
+        const data = await response.json()
+        console.log(`Email accounts API response page ${page}:`, data) // Debug log
+        
+        // Handle different possible response structures
+        let accounts = []
+        if (Array.isArray(data)) {
+          accounts = data
+        } else if (data.email_accounts && Array.isArray(data.email_accounts)) {
+          accounts = data.email_accounts
+        } else if (data.data && Array.isArray(data.data)) {
+          accounts = data.data
+        } else if (data.accounts && Array.isArray(data.accounts)) {
+          accounts = data.accounts
+        } else if (data.results && Array.isArray(data.results)) {
+          accounts = data.results
+        }
+        
+        console.log(`Found ${accounts.length} accounts on page ${page}`)
+        
+        // Add accounts from this page
+        allAccounts = [...allAccounts, ...accounts]
+        
+        // Check if there are more pages
+        if (accounts.length < 100 || accounts.length === 0) {
+          hasMorePages = false
+        } else {
+          page++
+        }
+        
+        // Safety check to prevent infinite loops
+        if (page > 50) {
+          console.warn('Reached maximum page limit (50), stopping pagination')
+          hasMorePages = false
+        }
       }
+      
+      console.log(`Total email accounts fetched: ${allAccounts.length}`)
       
       // Map API response to our expected format
-      const mappedAccounts = accounts.map((account: any, index: number) => ({
-        id: account.id || account.email_id || index,
-        email: account.email || account.email_address || account.from_email || 'Unknown Email',
-        status: account.status || account.account_status || 'unknown',
-        health_score: account.health_score || account.reputation_score || account.score || Math.floor(Math.random() * 40) + 60,
-        daily_limit: account.daily_limit || account.sending_limit || account.limit || 50,
-        sent_today: account.sent_today || account.emails_sent_today || account.today_sent || 0,
-        reputation: account.reputation || account.sender_reputation || 'good',
-        warmup_status: account.warmup_status || account.warmup || 'completed',
-        last_activity: account.last_activity || account.updated_at || account.last_used || new Date().toISOString(),
-        provider: account.provider || account.email_provider || account.smtp_provider || 'Gmail',
-        bounce_rate: account.bounce_rate || account.bounces || Math.random() * 5,
-        spam_rate: account.spam_rate || account.spam || Math.random() * 2,
-        deliverability: account.deliverability || account.delivery_rate || (100 - (account.bounce_rate || Math.random() * 5))
+      const mappedAccounts = allAccounts.map((account: any, index: number) => ({
+        id: account.id || account.email_id || account.account_id || index,
+        email: account.email || account.email_address || account.from_email || account.sender_email || 'Unknown Email',
+        status: account.status || account.account_status || account.state || 'unknown',
+        health_score: account.health_score || account.reputation_score || account.score || account.reputation || Math.floor(Math.random() * 40) + 60,
+        daily_limit: account.daily_limit || account.sending_limit || account.limit || account.max_emails_per_day || 50,
+        sent_today: account.sent_today || account.emails_sent_today || account.today_sent || account.sent_count_today || 0,
+        reputation: account.reputation || account.sender_reputation || account.reputation_status || 'good',
+        warmup_status: account.warmup_status || account.warmup || account.warmup_state || 'completed',
+        last_activity: account.last_activity || account.updated_at || account.last_used || account.last_email_sent || new Date().toISOString(),
+        provider: account.provider || account.email_provider || account.smtp_provider || account.smtp_host || 'Gmail',
+        bounce_rate: account.bounce_rate || account.bounces || account.bounce_percentage || Math.random() * 5,
+        spam_rate: account.spam_rate || account.spam || account.spam_percentage || Math.random() * 2,
+        deliverability: account.deliverability || account.delivery_rate || account.deliverability_score || (100 - (account.bounce_rate || Math.random() * 5))
       }))
       
       setEmailAccounts(mappedAccounts)
@@ -289,7 +320,20 @@ function App() {
       }
 
       const data = await response.json()
-      console.log('Campaigns API response:', data) // Debug log
+      console.log('=== CAMPAIGNS API RESPONSE DEBUG ===')
+      console.log('Full response:', JSON.stringify(data, null, 2))
+      console.log('Response type:', typeof data)
+      console.log('Is array:', Array.isArray(data))
+      if (data && typeof data === 'object') {
+        console.log('Object keys:', Object.keys(data))
+        if (data.data) {
+          console.log('data.data type:', typeof data.data, 'Is array:', Array.isArray(data.data))
+          if (Array.isArray(data.data) && data.data.length > 0) {
+            console.log('First campaign sample:', JSON.stringify(data.data[0], null, 2))
+          }
+        }
+      }
+      console.log('=== END DEBUG ===')
       
       // Handle different possible response structures
       let campaignList = []
@@ -299,21 +343,32 @@ function App() {
         campaignList = data.campaigns
       } else if (data.data && Array.isArray(data.data)) {
         campaignList = data.data
+      } else if (data.results && Array.isArray(data.results)) {
+        campaignList = data.results
       }
       
-      // Map API response to our expected format
-      const mappedCampaigns = campaignList.map((campaign: any) => ({
-        id: campaign.id || campaign.campaign_id || Math.random().toString(),
-        name: campaign.name || campaign.campaign_name || campaign.title || 'Unnamed Campaign',
-        status: campaign.status || campaign.campaign_status || 'unknown',
-        total_leads: campaign.total_leads || campaign.leads_count || campaign.total_contacts || 0,
-        sent_count: campaign.sent_count || campaign.emails_sent || campaign.sent || campaign.total_sent || 0,
-        open_count: campaign.open_count || campaign.opens || campaign.opened || campaign.total_opens || 0,
-        click_count: campaign.click_count || campaign.clicks || campaign.clicked || campaign.total_clicks || 0,
-        reply_count: campaign.reply_count || campaign.replies || campaign.responded || campaign.total_replies || 0,
-        bounce_count: campaign.bounce_count || campaign.bounces || campaign.bounced || campaign.total_bounces || 0,
-        created_at: campaign.created_at || campaign.created || campaign.date_created || new Date().toISOString()
-      }))
+      console.log(`Found ${campaignList.length} campaigns to process`)
+      
+      // Map API response to our expected format with extensive field mapping
+      const mappedCampaigns = campaignList.map((campaign: any, index: number) => {
+        console.log(`Processing campaign ${index + 1}:`, JSON.stringify(campaign, null, 2))
+        
+        const mapped = {
+          id: campaign.id || campaign.campaign_id || campaign._id || Math.random().toString(),
+          name: campaign.name || campaign.campaign_name || campaign.title || campaign.subject || 'Unnamed Campaign',
+          status: campaign.status || campaign.campaign_status || campaign.state || 'unknown',
+          total_leads: campaign.total_leads || campaign.leads_count || campaign.total_contacts || campaign.prospects_count || 0,
+          sent_count: campaign.sent_count || campaign.emails_sent || campaign.sent || campaign.total_sent || campaign.sent_emails || campaign.emails_count || 0,
+          open_count: campaign.open_count || campaign.opens || campaign.opened || campaign.total_opens || campaign.open_emails || campaign.unique_opens || 0,
+          click_count: campaign.click_count || campaign.clicks || campaign.clicked || campaign.total_clicks || campaign.click_emails || campaign.unique_clicks || 0,
+          reply_count: campaign.reply_count || campaign.replies || campaign.responded || campaign.total_replies || campaign.reply_emails || campaign.responses || 0,
+          bounce_count: campaign.bounce_count || campaign.bounces || campaign.bounced || campaign.total_bounces || campaign.bounce_emails || 0,
+          created_at: campaign.created_at || campaign.created || campaign.date_created || campaign.created_date || new Date().toISOString()
+        }
+        
+        console.log(`Mapped campaign:`, mapped)
+        return mapped
+      })
       
       setCampaigns(mappedCampaigns)
       
@@ -327,6 +382,13 @@ function App() {
       const totalReplied = mappedCampaigns.reduce((sum: number, campaign: any) => sum + (campaign.reply_count || 0), 0)
       const totalBounced = mappedCampaigns.reduce((sum: number, campaign: any) => sum + (campaign.bounce_count || 0), 0)
 
+      console.log('=== METRICS CALCULATION DEBUG ===')
+      console.log('Total sent:', totalSent)
+      console.log('Total opened:', totalOpened)
+      console.log('Total clicked:', totalClicked)
+      console.log('Total replied:', totalReplied)
+      console.log('Total bounced:', totalBounced)
+
       const calculatedMetrics = {
         totalEmails: totalSent || 0,
         openRate: totalSent > 0 ? (totalOpened / totalSent) * 100 : 0,
@@ -334,6 +396,9 @@ function App() {
         responseRate: totalSent > 0 ? (totalReplied / totalSent) * 100 : 0,
         bounceRate: totalSent > 0 ? (totalBounced / totalSent) * 100 : 0
       }
+
+      console.log('Calculated metrics:', calculatedMetrics)
+      console.log('=== END METRICS DEBUG ===')
 
       setMetrics(calculatedMetrics)
 
